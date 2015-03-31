@@ -122,19 +122,21 @@ public class CouchbaseClient2_0 extends MemcachedCompatibleClient {
         int tries=0;
         while (tries<100 && success!=true) {
           try {
+            // read in current document
             CASValue<Object> future = couchbaseClient.gets(key);
             Object document = future.getValue();
             if (document == null) {
                     System.err.println("Document not found!");
                     return ERROR;
             }
-            fromJson(document.toString(), null, result);
             // get cas value and use "compare and swap" rather than "replace" to avoid overwriting
             // any other updates made in the time since we fetched the document
             // REF: http://www.couchbase.com/autodocs/couchbase-java-client-1.1.8/com/couchbase/client/CouchbaseClient.html#cas(java.lang.String, long, java.lang.Object, net.spy.memcached.PersistTo, net.spy.memcached.ReplicateTo)
             // http://docs.couchbase.com/developer/dev-guide-3.0/update-info.html#concept29631__cas
             Long cas = future.getCas();
             CASResponse res = null;
+            fromJson(document.toString(), null, result);
+            result.putAll(values);
             if (persistTo == null && replicateTo == null) {
                 res = couchbaseClient.cas(key, cas, toJson(result));
             } else {
