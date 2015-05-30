@@ -286,7 +286,6 @@ public class CassandraCQLClient extends DB
 
             ResultSet rs = session.execute(bs);
             Row row = rs.one();
-            assert row != null : "Key " + key + " was not found; did you run a load job with the correct parameters?";
             if (row == null) {
                 System.err.println("Read returned no matching documents for key " + key);
                 return ERR;

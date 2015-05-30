@@ -97,17 +97,20 @@ public class CouchbaseClient extends DB {
 
     @Override
     public int update(String table, String key, HashMap<String, ByteIterator> values) {
+        /* if writeallfields was set then we're replacing the entire document */
         if (writeall) {
              return insert(table, key, values); 
         }
+        /* otherwise we're passed in a single random field to update on the existing document */
         key = createQualifiedKey(table, key);
-        // Update the document with CAS, retry once per second if CASMismatchException is raised
         String f=null;
         String v=null;
         for (Map.Entry entry : values.entrySet()) {
             f=entry.getKey().toString();
             v=entry.getValue().toString();
         }
+        // Update the document catching CAS exceptions, retry once per ~millisecond if CASMismatchException is raised
+        // as suggested by http://docs.couchbase.com/developer/java-2.1/documents-updating.html
         int tries=0;
         while (true) {
             JsonDocument document = bucket.get(key);
@@ -135,91 +138,6 @@ public class CouchbaseClient extends DB {
             }
         }
     }
-
-
-/*
-        Observable
-        .defer(() -> bucket.get("_test"))
-        .map(document -> {
-            document.content().put(entry.getKey().toString(), entry.getValue().toString());
-            return document;
-        })
-        .flatMap(bucket::replace)
-        .retryWhen(attempts ->
-            attempts.flatMap(n -> {
-                System.err.println("retrying when " + n);
-                if (!(n instanceof CASMismatchException)) {
-                    return Observable.error(n);
-                }
-                return Observable.timer(1, TimeUnit.MILLISECONDS);
-            })
-        )
-        .subscribe(result -> System.out.println("replace: " + result));
-        System.out.println("update result is " + result.toString();
-    } 
-
-    /* public int update(String table, String key, HashMap<String, ByteIterator> values) {
-        key = createQualifiedKey(table, key); 
-        try {
-            Iterator<Map.Entry<String, ByteIterator>> entries = values.entrySet().iterator();
-            final Map.Entry<String, ByteIterator> entry = entries.next();
-            final String k = entry.getKey();
-            final String v = entry.getValue().toString();
-            Observable<JsonDocument> loaded = bucket.async().get(key);
-            if (loaded == null) {
-                System.err.println("update: Document not found. key " + key);
-                return ERROR;
-            } else {
-                final String finalKey = key;
-                Observable.defer(new Func0<Observable<JsonDocument>>() {
-                    @Override
-                    public Observable<JsonDocument> call() {
-                        return bucket.async().get(finalKey);
-                    }
-                })
-                        .map(new Func1<JsonDocument, JsonDocument>() {
-                            @Override
-                            public JsonDocument call(JsonDocument document) {
-                                document.content().put(k, v);
-                                return document;
-                                }
-                        })
-                        .flatMap(new Func1<JsonDocument, Observable<JsonDocument>>() {
-                            @Override
-                            public Observable<JsonDocument> call(JsonDocument document) {
-                                if (persistTo == null && replicateTo == null) {
-                                    return bucket.async().replace(document);
-                                } else if (persistTo != null) {
-                                    return bucket.async().replace(document, persistTo);
-                                } else {
-                                    return bucket.async().replace(document, replicateTo);
-                                }
-                            }
-                        })
-                        .retryWhen(new Func1<Observable<? extends Throwable>, Observable<?>>() {
-                                       @Override
-                                       public Observable<?> call(Observable<? extends Throwable> attempts) {
-                                           return attempts.flatMap(new Func1<Throwable, Observable<? extends Long>>() {
-                                               @Override
-                                               public Observable<? extends Long> call(Throwable e) {
-                                                   if (!(e instanceof CASMismatchException)) {
-                                                       return Observable.error(e);
-                                                   }
-                                                   return Observable.timer(1, TimeUnit.MILLISECONDS);
-                                               }
-                                           });
-                                       }
-                                   }
-                        )
-                        .subscribe();
-            }
-        } catch (Exception e) {
-            System.err.println("Document not update with unexpected error.  key " + key);
-            e.printStackTrace();
-            return ERROR;
-        }
-        return OK;
-    }   */
 
     @Override
     public int insert(String table, String key, HashMap<String, ByteIterator> values) {
@@ -255,7 +173,7 @@ public class CouchbaseClient extends DB {
             }
             result.add(rowMap);
         }
-        return 0;
+        return OK;
     }
 
     @Override
