@@ -16,24 +16,26 @@
   <dependencies>
     <dependency>
       <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-log4j12</artifactId>
-      <version>1.7.2</version>
+      <artifactId>slf4j-api</artifactId>
+      <version>1.6.4</version>
     </dependency>
   </dependencies>
  
   <!-- Properties Management -->
   <properties>
     <maven.assembly.version>2.2.1</maven.assembly.version>
-    <mongodb.version>2.13.0</mongodb.version>
+    <cassandra.version>2.1.2</cassandra.version>
+    <cassandra.cql.version>2.1.5</cassandra.cql.version>
+    <mongodb.version>3.0.0</mongodb.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
   </properties>
 
   <modules>
     <!--module>build-tools</module-->
+    <module>cassandra</module>
     <module>core</module>
     <module>mongodb</module>
-    <module>memcached</module>
-    <module>couchbase-2.0</module>
+    <module>couchbase-3.0</module>
     <module>distribution</module>
   </modules>
 
@@ -46,6 +48,23 @@
         <configuration>
           <source>1.6</source>
           <target>1.6</target>
+        </configuration>
+      </plugin>
+      <!-- Cleanup after all modules, even if they are commented out
+           of this pom -->
+      <plugin>
+        <artifactId>maven-clean-plugin</artifactId>
+        <version>2.4.1</version>
+        <configuration>
+          <filesets>
+            <fileset>
+              <directory>${basedir}</directory>
+              <includes>
+                <include>**/target/**/*.jar</include>
+              </includes>
+              <followSymlinks>false</followSymlinks>
+            </fileset>
+          </filesets>
         </configuration>
       </plugin>
     </plugins>
