@@ -476,26 +476,26 @@ public class CoreWorkload extends Workload
 
 		if (op.compareTo("READ")==0)
 		{
-			doTransactionRead(db);
+			if ( doTransactionRead(db) == 0) return true;
 		}
 		else if (op.compareTo("UPDATE")==0)
 		{
-			doTransactionUpdate(db);
+			if ( doTransactionUpdate(db) == 0) return true;
 		}
 		else if (op.compareTo("INSERT")==0)
 		{
-			doTransactionInsert(db);
+			if ( doTransactionInsert(db) == 0) return true;
 		}
 		else if (op.compareTo("SCAN")==0)
 		{
-			doTransactionScan(db);
+			if ( doTransactionScan(db) == 0) return true;
 		}
 		else
 		{
-			doTransactionReadModifyWrite(db);
+			if ( doTransactionReadModifyWrite(db) == 0) return true;
 		}
 		
-		return true;
+		return false;
 	}
 
     int nextKeynum() {
@@ -516,7 +516,7 @@ public class CoreWorkload extends Workload
         return keynum;
     }
 
-	public void doTransactionRead(DB db)
+	public int doTransactionRead(DB db)
 	{
 		//choose a random key
 		int keynum = nextKeynum();
@@ -534,10 +534,10 @@ public class CoreWorkload extends Workload
 			fields.add(fieldname);
 		}
 
-		db.read(table,keyname,fields,new HashMap<String,ByteIterator>());
+		return db.read(table,keyname,fields,new HashMap<String,ByteIterator>());
 	}
 	
-	public void doTransactionReadModifyWrite(DB db)
+	public int doTransactionReadModifyWrite(DB db)
 	{
 		//choose a random key
 		int keynum = nextKeynum();
@@ -572,16 +572,17 @@ public class CoreWorkload extends Workload
 		
 		long st=System.nanoTime();
 
-		db.read(table,keyname,fields,new HashMap<String,ByteIterator>());
+		if ( db.read(table,keyname,fields,new HashMap<String,ByteIterator>()) != 0 ) return 1;
 		
-		db.update(table,keyname,values);
+		if ( db.update(table,keyname,values) != 0 ) return 1;
 
 		long en=System.nanoTime();
 		
 		Measurements.getMeasurements().measure("READ-MODIFY-WRITE", (int)((en-st)/1000));
+                return 0;
 	}
 	
-	public void doTransactionScan(DB db)
+	public int doTransactionScan(DB db)
 	{
 		//choose a random key
 		int keynum = nextKeynum();
@@ -602,10 +603,10 @@ public class CoreWorkload extends Workload
 			fields.add(fieldname);
 		}
 
-		db.scan(table,startkeyname,len,fields,new Vector<HashMap<String,ByteIterator>>());
+		return db.scan(table,startkeyname,len,fields,new Vector<HashMap<String,ByteIterator>>());
 	}
 
-	public void doTransactionUpdate(DB db)
+	public int doTransactionUpdate(DB db)
 	{
 		//choose a random key
 		int keynum = nextKeynum();
@@ -625,10 +626,10 @@ public class CoreWorkload extends Workload
 		   values = buildUpdate();
 		}
 
-		db.update(table,keyname,values);
+		return db.update(table,keyname,values);
 	}
 
-	public void doTransactionInsert(DB db)
+	public int doTransactionInsert(DB db)
 	{
 		//choose the next key
 		int keynum=transactioninsertkeysequence.nextInt();
@@ -636,6 +637,6 @@ public class CoreWorkload extends Workload
 		String dbkey = buildKeyName(keynum);
 
 		HashMap<String, ByteIterator> values = buildValues();
-		db.insert(table,dbkey,values);
+		return db.insert(table,dbkey,values);
 	}
 }
